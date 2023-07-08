@@ -14,8 +14,15 @@ pub struct State {
     pub ecs: World,
 }
 
+#[derive(PartialEq, Copy, Clone)]
+pub enum RunState {
+    AwaitingInput, PreRun, PlayerTurn, MonsterTurn 
+}
+
 impl State {
     fn run_systems(&mut self) {
+        let mut fov = systems::VisibilitySystem{};
+        fov.run_now(&self.ecs);
         let mut map_index = systems::MapIndexingSystem{};
         map_index.run_now(&self.ecs);
         let mut melee_combat = systems::MeleeCombatSystem{};
@@ -29,23 +36,55 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx : &mut BTerm) {
         ctx.cls();
-        self.run_systems();
-        self.ecs.maintain();
 
         draw_map(&self.ecs, ctx);
-
+        
         {
+            let map = self.ecs.fetch::<Map>();
             let positions = self.ecs.read_storage::<Position>();
             let renderables = self.ecs.read_storage::<Renderable>();
             for (pos, render) in (&positions, &renderables).join() {
-                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                let idx = map.xy_idx(pos.x, pos.y);
+                if map.visible_tiles[idx] {
+                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph)
+                }
             }
+            
+            gui::draw_ui(&self.ecs, ctx);
         }
 
-        player_input(self, ctx);
-        control_input(self, ctx);
+        let mut newrunstate;
+        {
+            let runstate = self.ecs.fetch::<RunState>();
+            newrunstate = *runstate;
+        }
 
-        gui::draw_ui(&self.ecs, ctx);
+        match newrunstate {
+            RunState::PreRun => {
+                self.run_systems();
+                self.ecs.maintain();
+                newrunstate = RunState::AwaitingInput;
+            }
+            RunState::AwaitingInput => {
+                newrunstate = player_input(self, ctx);
+            }
+            RunState::PlayerTurn => {
+                self.run_systems();
+                self.ecs.maintain();
+                newrunstate = RunState::MonsterTurn;
+            }
+            RunState::MonsterTurn => {
+                self.run_systems();
+                self.ecs.maintain();
+                newrunstate = RunState::AwaitingInput;
+            }            
+        }
+
+        {
+            let mut runwriter = self.ecs.write_resource::<RunState>();
+            *runwriter = newrunstate;
+        }
+
         ctx.print(1, 49, &format!("FPS: {}", ctx.fps));
 
         systems::delete_the_dead(&mut self.ecs);
@@ -65,14 +104,13 @@ fn main() -> BError {
 
     let rng = bracket_lib::random::RandomNumberGenerator::new();
 
-    let map = map::basic_map();
-
     gamestate.ecs.register::<Position>();
     gamestate.ecs.register::<Renderable>();
     gamestate.ecs.register::<Player>();
     gamestate.ecs.register::<Mob>();
     gamestate.ecs.register::<Controllable>();
     gamestate.ecs.register::<Name>();
+    gamestate.ecs.register::<Viewshed>();
 
     // Stats components
     gamestate.ecs.register::<SinglePoolStat>();
@@ -87,14 +125,17 @@ fn main() -> BError {
     gamestate.ecs.register::<MeleeIntent>();
     gamestate.ecs.register::<Damage>();
 
+    let map = map::basic_map();
+
     let player_entity = gamestate
         .ecs
         .create_entity()
         .with(Player{})
         .with(Controllable{ current: true})
         .with(Position{ x: 20, y: 40})
-        .with(BlocksTile{})
         .with(Name{name: "Player".to_string() })
+        .with(BlocksTile{})
+        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
         .with(Renderable{
             glyph: bracket_lib::terminal::to_cp437('@'),
             fg: RGB::named(bracket_lib::color::YELLOW),
@@ -125,6 +166,7 @@ fn main() -> BError {
         .with(Position{ x: 21, y: 41})
         .with(BlocksTile{})
         .with(Name{name: "Mob 1".to_string() })
+        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
         .with(Renderable{
             glyph: bracket_lib::terminal::to_cp437('G'),
             fg: RGB::named(bracket_lib::color::YELLOW),
@@ -144,9 +186,10 @@ fn main() -> BError {
         })        
         .build();
     
-    gamestate.ecs.insert(map);
     gamestate.ecs.insert(active_camera);
+    gamestate.ecs.insert(map);
     gamestate.ecs.insert(rng);
+    gamestate.ecs.insert(RunState::PreRun);
 
     main_loop(context, gamestate)
 }

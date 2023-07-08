@@ -3,13 +3,15 @@
   - who is being controlled - done!
   - who is controllable - done!
 - systems to
-  - command to switch
+  - command to switch - done!
   - actualy system (ECS) to switch every turn who is being controlled
   - combat
-    - melee
+    - melee - done!
     - ranged?
     - targeted
     - area
+  - fog of war
+  - field of view
 - states
   - turns (controlled and non-controlled)
   - attack?
@@ -20,4 +22,3 @@
   - current controlled entity
     - stats, etc.
   - inventory
-  
