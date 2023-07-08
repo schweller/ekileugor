@@ -1,0 +1,23 @@
+# Basic systems
+- components to identify
+  - who is being controlled - done!
+  - who is controllable - done!
+- systems to
+  - command to switch
+  - actualy system (ECS) to switch every turn who is being controlled
+  - combat
+    - melee
+    - ranged?
+    - targeted
+    - area
+- states
+  - turns (controlled and non-controlled)
+  - attack?
+  - who is not being controlled should move or do smth
+  - basic ui state -> inventory, stats
+  - cause damage, either way
+- ui
+  - current controlled entity
+    - stats, etc.
+  - inventory
+  
