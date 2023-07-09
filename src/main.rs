@@ -81,7 +81,7 @@ impl GameState for State {
             RunState::CurseTurn => {
                 self.run_systems();
                 self.ecs.maintain();
-                // try_change_control(&mut self.ecs);
+                // try_curse(&mut self.ecs);
                 newrunstate = RunState::AwaitingInput;
             }   
         }
@@ -131,6 +131,14 @@ fn main() -> BError {
     gamestate.ecs.register::<MeleeIntent>();
     gamestate.ecs.register::<Damage>();
 
+    gamestate.ecs.register::<Item>();
+    gamestate.ecs.register::<ItemOwned>();
+    gamestate.ecs.register::<UseItemIntent>();
+    gamestate.ecs.register::<PickupItemIntent>();
+    gamestate.ecs.register::<Consumable>();
+    gamestate.ecs.register::<Heals>();
+
+
     let map : Map = Map::map_with_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
@@ -140,41 +148,45 @@ fn main() -> BError {
         target: player_entity
     };
 
-    for (i, room) in map.rooms.iter().skip(1).enumerate() {
-        let (x,y) = room.center();
+    // for (i, room) in map.rooms.iter().skip(1).enumerate() {
+    //     let (x,y) = room.center();
 
-        gamestate.ecs
-            .create_entity()
-            .with(Mob{})
-            .with(Controllable{ current: false })
-            .with(Position{ x, y})
-            .with(BlocksTile{})
-            .with(Name{name: format!("Mob {}", i) })
-            .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
-            .with(Renderable{
-                glyph: bracket_lib::terminal::to_cp437('G'),
-                fg: RGB::named(bracket_lib::color::YELLOW),
-                bg: RGB::named(bracket_lib::color::BLACK),
-                render_order: 1
-            })
-            .with(CombatStats{
-                attack: 5,
-                defense: 5,
-                evade: 0
-            })
-            .with(PoolStats{
-                hp: SinglePoolStat { current: 10, max: 10 },
-                xp: 0,
-                level: 1,
-                gold: 0
-            })        
-            .build();
+    //     gamestate.ecs
+    //         .create_entity()
+    //         .with(Mob{})
+    //         .with(Controllable{ current: false })
+    //         .with(Position{ x, y})
+    //         .with(BlocksTile{})
+    //         .with(Name{name: format!("Mob {}", i) })
+    //         .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
+    //         .with(Renderable{
+    //             glyph: bracket_lib::terminal::to_cp437('G'),
+    //             fg: RGB::named(bracket_lib::color::YELLOW),
+    //             bg: RGB::named(bracket_lib::color::BLACK),
+    //             render_order: 1
+    //         })
+    //         .with(CombatStats{
+    //             attack: 5,
+    //             defense: 5,
+    //             evade: 0
+    //         })
+    //         .with(PoolStats{
+    //             hp: SinglePoolStat { current: 10, max: 10 },
+    //             xp: 0,
+    //             level: 1,
+    //             gold: 0
+    //         })        
+    //         .build();
+    // }
+    gamestate.ecs.insert(rng);
+
+    for room in map.rooms.iter().skip(1) {
+        game::spawn_room(&mut gamestate.ecs, room);
     }
 
     gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});    
     gamestate.ecs.insert(active_entity);
     gamestate.ecs.insert(map);
-    gamestate.ecs.insert(rng);
     gamestate.ecs.insert(RunState::PreRun);
 
     main_loop(context, gamestate)

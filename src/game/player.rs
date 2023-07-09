@@ -1,9 +1,9 @@
-use bracket_lib::terminal::{BTerm, VirtualKeyCode, console};
+use bracket_lib::terminal::{BTerm, VirtualKeyCode};
 use specs::prelude::*;
 use crate::{components::*, RunState};
 use crate::map::Map;
 
-use super::try_change_control;
+use super::try_curse;
 use super::super::State;
 
 use std::cmp::{min, max};
@@ -46,7 +46,7 @@ pub fn player_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
             VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
             VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
             VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
-            VirtualKeyCode::A => try_change_control(&mut gs.ecs),
+            // VirtualKeyCode::A => try_curse(&mut gs.ecs),
             _ => { return RunState::AwaitingInput }
         },
     }

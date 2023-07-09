@@ -101,8 +101,8 @@ impl Map {
             rooms : Vec::new(),
             width : MAPWIDTH as i32,
             height: MAPHEIGHT as i32,
-            revealed_tiles : vec![true; MAPCOUNT],
-            visible_tiles : vec![true; MAPCOUNT],
+            revealed_tiles : vec![false; MAPCOUNT],
+            visible_tiles : vec![false; MAPCOUNT],
             blocked: vec![false; MAPCOUNT],
             tile_content : vec![Vec::new(); MAPCOUNT]
         };
@@ -176,7 +176,7 @@ impl Algorithm2D for Map {
     }
 }
 
-// Deprecated/Unused for now
+// @Deprecated
 pub fn basic_map() -> Map {
     let mut new_map = Map{
         tiles: vec![TileType::Floor; 80*50],

@@ -1,10 +1,10 @@
 
 mod player;
-mod control;
+mod curse;
 mod spawner;
 mod log;
 
 pub use player::*;
-pub use control::*;
+pub use curse::*;
 pub use spawner::*;
 pub use log::*;
