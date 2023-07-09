@@ -4,16 +4,20 @@
   - who is controllable - done!
 - systems to
   - command to switch - done!
-  - actualy system (ECS) to switch every turn who is being controlled
+  - actualy system (ECS) to switch every turn who is being controlled - IMPORTANT
   - combat
     - melee - done!
-    - ranged?
-    - targeted
-    - area
-  - fog of war
-  - field of view
+    - ranged - IMPORTANT 
+    - targeted - IMPORTANT
+    - area - IMPORTANT
+  - fog of war - done
+  - field of view - done
+- map
+  - basic mapping (rooms and corridors) - done!
+  - map builder
+  - bitmask (nice walls) - done!
 - states
-  - turns (controlled and non-controlled)
+  - turns (controlled and non-controlled) 
   - attack?
   - who is not being controlled should move or do smth
   - basic ui state -> inventory, stats

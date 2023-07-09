@@ -16,7 +16,7 @@ pub struct State {
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
-    AwaitingInput, PreRun, PlayerTurn, MonsterTurn 
+    AwaitingInput, PreRun, PlayerTurn, MonsterTurn, CurseTurn
 }
 
 impl State {
@@ -76,8 +76,14 @@ impl GameState for State {
             RunState::MonsterTurn => {
                 self.run_systems();
                 self.ecs.maintain();
+                newrunstate = RunState::CurseTurn;
+            }
+            RunState::CurseTurn => {
+                self.run_systems();
+                self.ecs.maintain();
+                // try_change_control(&mut self.ecs);
                 newrunstate = RunState::AwaitingInput;
-            }            
+            }   
         }
 
         {
@@ -125,68 +131,48 @@ fn main() -> BError {
     gamestate.ecs.register::<MeleeIntent>();
     gamestate.ecs.register::<Damage>();
 
-    let map = map::basic_map();
+    let map : Map = Map::map_with_rooms_and_corridors();
+    let (player_x, player_y) = map.rooms[0].center();
 
-    let player_entity = gamestate
-        .ecs
-        .create_entity()
-        .with(Player{})
-        .with(Controllable{ current: true})
-        .with(Position{ x: 20, y: 40})
-        .with(Name{name: "Player".to_string() })
-        .with(BlocksTile{})
-        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
-        .with(Renderable{
-            glyph: bracket_lib::terminal::to_cp437('@'),
-            fg: RGB::named(bracket_lib::color::YELLOW),
-            bg: RGB::named(bracket_lib::color::BLACK),
-            render_order: 0
-        })
-        .with(CombatStats{
-            attack: 10,
-            defense: 10,
-            evade: 0
-        })
-        .with(PoolStats{
-            hp: SinglePoolStat { current: 25, max: 25 },
-            xp: 0,
-            level: 1,
-            gold: 0
-        })
-        .build();
+    let player_entity = game::player(&mut gamestate.ecs, player_x, player_y);
 
-    let active_camera = ActiveEntity{
+    let active_entity = ActiveEntity{
         target: player_entity
     };
 
-    gamestate.ecs
-        .create_entity()
-        .with(Mob{})
-        .with(Controllable{ current: false })
-        .with(Position{ x: 21, y: 41})
-        .with(BlocksTile{})
-        .with(Name{name: "Mob 1".to_string() })
-        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
-        .with(Renderable{
-            glyph: bracket_lib::terminal::to_cp437('G'),
-            fg: RGB::named(bracket_lib::color::YELLOW),
-            bg: RGB::named(bracket_lib::color::BLACK),
-            render_order: 1
-        })
-        .with(CombatStats{
-            attack: 5,
-            defense: 5,
-            evade: 0
-        })
-        .with(PoolStats{
-            hp: SinglePoolStat { current: 10, max: 10 },
-            xp: 0,
-            level: 1,
-            gold: 0
-        })        
-        .build();
-    
-    gamestate.ecs.insert(active_camera);
+    for (i, room) in map.rooms.iter().skip(1).enumerate() {
+        let (x,y) = room.center();
+
+        gamestate.ecs
+            .create_entity()
+            .with(Mob{})
+            .with(Controllable{ current: false })
+            .with(Position{ x, y})
+            .with(BlocksTile{})
+            .with(Name{name: format!("Mob {}", i) })
+            .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
+            .with(Renderable{
+                glyph: bracket_lib::terminal::to_cp437('G'),
+                fg: RGB::named(bracket_lib::color::YELLOW),
+                bg: RGB::named(bracket_lib::color::BLACK),
+                render_order: 1
+            })
+            .with(CombatStats{
+                attack: 5,
+                defense: 5,
+                evade: 0
+            })
+            .with(PoolStats{
+                hp: SinglePoolStat { current: 10, max: 10 },
+                xp: 0,
+                level: 1,
+                gold: 0
+            })        
+            .build();
+    }
+
+    gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});    
+    gamestate.ecs.insert(active_entity);
     gamestate.ecs.insert(map);
     gamestate.ecs.insert(rng);
     gamestate.ecs.insert(RunState::PreRun);

@@ -26,7 +26,6 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         let target = stats.get(*potential_target);
         if let Some(_t) = target {
             melee_intent.insert(active_entity.target, MeleeIntent { target: *potential_target }).expect("Unable to insert melee intent");
-            console::log(&format!("From Hell's Heart, I stab thee!"));
             return;
         }
     }
