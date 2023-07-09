@@ -17,7 +17,7 @@ pub struct State {
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
-    AwaitingInput, PreRun, PlayerTurn, MonsterTurn, CurseTurn
+    AwaitingInput, PreRun, PlayerTurn, MonsterTurn, CurseTurn, NextLevel
 }
 
 impl State {
@@ -30,11 +30,86 @@ impl State {
         melee_combat.run_now(&self.ecs);
         let mut damage = systems::DamageSystem{};
         damage.run_now(&self.ecs);
-        let mut inventory = systems::InventorySystem{};
+        let mut inventory = systems::ItemPickupSystem{};
         inventory.run_now(&self.ecs);
+        let mut inventory_use = systems::ItemUseSystem{};
+        inventory_use.run_now(&self.ecs);
         let mut particles = systems::ParticleSpawnSystem{};
         particles.run_now(&self.ecs);
         self.ecs.maintain();
+    }
+}
+
+impl State {
+    fn remove_entities_next_level(&mut self) -> Vec<Entity> {
+        let entities = self.ecs.entities();
+        let player = self.ecs.read_storage::<Player>();
+        let stored_items = self.ecs.read_storage::<ItemOwned>();
+        let player_entity = self.ecs.fetch::<Entity>();
+
+        let mut to_remove : Vec<Entity> = Vec::new();
+        for entity in entities.join() {
+            let mut should_remove = true;
+
+            // Don't remove the hero
+            let p = player.get(entity);
+            if let Some(_p) = p {
+                should_remove = false;
+            }
+
+            // Don't remove hero's items
+            let stored = stored_items.get(entity);
+            if let Some(stored) = stored {
+                if stored.owner == *player_entity {
+                    should_remove = false;
+                }
+            }            
+
+            if should_remove {
+                to_remove.push(entity);
+            }
+        }
+        to_remove
+    }
+
+    fn goto_next_level(&mut self) {
+        let to_remove = self.remove_entities_next_level();
+        for entity in to_remove {
+            self.ecs.delete_entity(entity).expect("Unable to delete entity on Level Change");
+        }
+
+        let map;
+        {
+            let mut map_resource = self.ecs.write_resource::<Map>();
+            let current_depth = map_resource.depth;
+            *map_resource = Map::map_with_rooms_and_corridors(current_depth + 1);
+            map = map_resource.clone();
+        }
+
+        for room in map.rooms.iter().skip(1) {
+            spawn_room(&mut self.ecs, room);
+        }
+
+        let (player_x, player_y) = map.rooms[0].center();
+        let player_entity = self.ecs.fetch_mut::<Entity>();
+        let mut positions = self.ecs.write_storage::<Position>();
+        let player_entity_position = positions.get_mut(*player_entity);
+        if let Some(player_entity_position) = player_entity_position {
+            player_entity_position.x = player_x;
+            player_entity_position.y = player_y;
+        }
+        let mut active_entity = self.ecs.write_resource::<ActiveEntity>();
+        active_entity.target = *player_entity;
+
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        let vs = viewsheds.get_mut(*player_entity);
+        if let Some(vs) = vs {
+            vs.dirty = true;
+        }
+        let mut log = self.ecs.fetch_mut::<GameLog>();
+        log.entries.push("You reached the portal and moved on!".to_string()); 
+        // reset stats?
+        
     }
 }
 
@@ -93,7 +168,11 @@ impl GameState for State {
                 self.ecs.maintain();
                 // try_curse(&mut self.ecs);
                 newrunstate = RunState::AwaitingInput;
-            }   
+            }
+            RunState::NextLevel => {
+                self.goto_next_level();
+                newrunstate = RunState::PreRun;
+            }
         }
 
         {
@@ -151,7 +230,7 @@ fn main() -> BError {
     gamestate.ecs.register::<ParticleLifetime>();
 
 
-    let map : Map = Map::map_with_rooms_and_corridors();
+    let map : Map = Map::map_with_rooms_and_corridors(1);
     let (player_x, player_y) = map.rooms[0].center();
 
     let player_entity = game::player(&mut gamestate.ecs, player_x, player_y);
@@ -159,37 +238,7 @@ fn main() -> BError {
     let active_entity = ActiveEntity{
         target: player_entity
     };
-
-    // for (i, room) in map.rooms.iter().skip(1).enumerate() {
-    //     let (x,y) = room.center();
-
-    //     gamestate.ecs
-    //         .create_entity()
-    //         .with(Mob{})
-    //         .with(Controllable{ current: false })
-    //         .with(Position{ x, y})
-    //         .with(BlocksTile{})
-    //         .with(Name{name: format!("Mob {}", i) })
-    //         .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
-    //         .with(Renderable{
-    //             glyph: bracket_lib::terminal::to_cp437('G'),
-    //             fg: RGB::named(bracket_lib::color::YELLOW),
-    //             bg: RGB::named(bracket_lib::color::BLACK),
-    //             render_order: 1
-    //         })
-    //         .with(CombatStats{
-    //             attack: 5,
-    //             defense: 5,
-    //             evade: 0
-    //         })
-    //         .with(PoolStats{
-    //             hp: SinglePoolStat { current: 10, max: 10 },
-    //             xp: 0,
-    //             level: 1,
-    //             gold: 0
-    //         })        
-    //         .build();
-    // }
+    
     gamestate.ecs.insert(rng);
 
     for room in map.rooms.iter().skip(1) {
@@ -198,6 +247,7 @@ fn main() -> BError {
 
     gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});
     gamestate.ecs.insert(active_entity);
+    gamestate.ecs.insert(player_entity);
     gamestate.ecs.insert(map);
     gamestate.ecs.insert(RunState::PreRun);
     gamestate.ecs.insert(ParticleBuilder::new());

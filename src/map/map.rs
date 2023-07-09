@@ -1,31 +1,33 @@
 use std::cmp::{min, max};
 
 use bracket_lib::prelude::*;
+use serde::{Serialize, Deserialize};
 use specs::prelude::*;
 
-pub const MAPWIDTH : usize = 65;
-pub const MAPHEIGHT : usize = 43;
+pub const MAPWIDTH : usize = 32;
+pub const MAPHEIGHT : usize = 21;
 pub const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
-    Wall, Floor
+    Wall, Floor, Exit
 }
 
-pub struct Rect {
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub struct RoomRect {
     pub x1 : i32,
     pub x2 : i32,
     pub y1 : i32,
     pub y2 : i32
 }
   
-impl Rect {
-    pub fn new(x:i32, y: i32, w:i32, h:i32) -> Rect {
-        Rect{x1:x, y1:y, x2:x+w, y2:y+h}
+impl RoomRect {
+    pub fn new(x:i32, y: i32, w:i32, h:i32) -> RoomRect {
+        RoomRect{x1:x, y1:y, x2:x+w, y2:y+h}
     }
 
     // Returns true if this overlaps with other
-    pub fn intersect(&self, other:&Rect) -> bool {
+    pub fn intersect(&self, other:&RoomRect) -> bool {
         self.x1 <= other.x2 && self.x2 >= other.x1 && self.y1 <= other.y2 && self.y2 >= other.y1
     }
 
@@ -34,15 +36,20 @@ impl Rect {
     }
 }
 
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub blocked: Vec<bool>,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub tile_content: Vec<Vec<Entity>>,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles : Vec<bool>,
-    pub rooms : Vec<Rect>,
+    pub rooms : Vec<RoomRect>,
     pub width: i32,
-    pub height: i32
+    pub height: i32,
+    pub depth: i32
 }
 
 impl Map {
@@ -50,7 +57,7 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
-    fn apply_room_to_map(&mut self, room : &Rect) {
+    fn apply_room_to_map(&mut self, room : &RoomRect) {
         for y in room.y1 +1 ..= room.y2 {
             for x in room.x1 + 1 ..= room.x2 {
                 let idx = self.xy_idx(x, y);
@@ -95,7 +102,7 @@ impl Map {
         !self.blocked[idx]
     }
 
-    pub fn map_with_rooms_and_corridors() -> Map {
+    pub fn map_with_rooms_and_corridors(depth: i32) -> Map {
         let mut map = Map{
             tiles : vec![TileType::Wall; MAPCOUNT],
             rooms : Vec::new(),
@@ -104,10 +111,11 @@ impl Map {
             revealed_tiles : vec![false; MAPCOUNT],
             visible_tiles : vec![false; MAPCOUNT],
             blocked: vec![false; MAPCOUNT],
-            tile_content : vec![Vec::new(); MAPCOUNT]
+            tile_content : vec![Vec::new(); MAPCOUNT],
+            depth
         };
       
-        const MAX_ROOMS : i32 = 15;
+        const MAX_ROOMS : i32 = 7;
         const MIN_SIZE : i32 = 3;
         const MAX_SIZE : i32 = 5;
       
@@ -117,7 +125,7 @@ impl Map {
             let h = rng.range(MIN_SIZE, MAX_SIZE);
             let x = rng.roll_dice(1, (MAPWIDTH as i32) - w - 1) - 1;
             let y = rng.roll_dice(1, (MAPHEIGHT as i32) - h - 1) - 1;
-            let new_room = Rect::new(x, y, w, h);
+            let new_room = RoomRect::new(x, y, w, h);
             let mut ok = true;
             for other_room in map.rooms.iter() {
                 if new_room.intersect(other_room) { ok = false }
@@ -138,6 +146,10 @@ impl Map {
                 map.rooms.push(new_room);            
             }
         }
+
+        let exit_position = map.rooms[map.rooms.len() -1 ].center();
+        let exit_idx = map.xy_idx(exit_position.0, exit_position.1);
+        map.tiles[exit_idx] = TileType::Exit;
     
         map
     }
@@ -177,49 +189,49 @@ impl Algorithm2D for Map {
 }
 
 // @Deprecated
-pub fn basic_map() -> Map {
-    let mut new_map = Map{
-        tiles: vec![TileType::Floor; 80*50],
-        blocked: vec![false; 80*50],
-        rooms : Vec::new(),
-        tile_content: vec![Vec::new(); 80*50],
-        visible_tiles: vec![false; 80*50],
-        revealed_tiles: vec![false; 80*50],
-        width: 80 as i32,
-        height: 50 as i32
-    };
+// pub fn basic_map() -> Map {
+//     let mut new_map = Map{
+//         tiles: vec![TileType::Floor; 80*50],
+//         blocked: vec![false; 80*50],
+//         rooms : Vec::new(),
+//         tile_content: vec![Vec::new(); 80*50],
+//         visible_tiles: vec![false; 80*50],
+//         revealed_tiles: vec![false; 80*50],
+//         width: 80 as i32,
+//         height: 50 as i32
+//     };
 
-    // Make the boundaries walls
-    for x in 0..80 {
-        let foo = new_map.xy_idx(x, 0);
-        let bar = new_map.xy_idx(x, 49);
-        new_map.tiles[foo] = TileType::Wall;
-        new_map.tiles[bar] = TileType::Wall;
-        new_map.blocked[foo] = true;
-        new_map.blocked[bar] = true;
-    }
+//     // Make the boundaries walls
+//     for x in 0..80 {
+//         let foo = new_map.xy_idx(x, 0);
+//         let bar = new_map.xy_idx(x, 49);
+//         new_map.tiles[foo] = TileType::Wall;
+//         new_map.tiles[bar] = TileType::Wall;
+//         new_map.blocked[foo] = true;
+//         new_map.blocked[bar] = true;
+//     }
 
-    for y in 0..50 {
-        let foo = new_map.xy_idx(0, y);
-        let bar = new_map.xy_idx(79, y);
-        new_map.tiles[foo] = TileType::Wall;
-        new_map.tiles[bar] = TileType::Wall;
-        new_map.blocked[foo] = true;
-        new_map.blocked[bar] = true;        
-    }
+//     for y in 0..50 {
+//         let foo = new_map.xy_idx(0, y);
+//         let bar = new_map.xy_idx(79, y);
+//         new_map.tiles[foo] = TileType::Wall;
+//         new_map.tiles[bar] = TileType::Wall;
+//         new_map.blocked[foo] = true;
+//         new_map.blocked[bar] = true;        
+//     }
 
-    let mut rng = bracket_lib::random::RandomNumberGenerator::new();
-    for _i in 0..400 {
-        let x = rng.roll_dice(1, 79);
-        let y = rng.roll_dice(1, 49);
-        let idx = new_map.xy_idx(x, y);
-        if idx != new_map.xy_idx(40, 25) {
-            new_map.tiles[idx] = TileType::Wall;
-            new_map.blocked[idx] = true;
-        }        
-    }
-  new_map
-}
+//     let mut rng = bracket_lib::random::RandomNumberGenerator::new();
+//     for _i in 0..400 {
+//         let x = rng.roll_dice(1, 79);
+//         let y = rng.roll_dice(1, 49);
+//         let idx = new_map.xy_idx(x, y);
+//         if idx != new_map.xy_idx(40, 25) {
+//             new_map.tiles[idx] = TileType::Wall;
+//             new_map.blocked[idx] = true;
+//         }        
+//     }
+//   new_map
+// }
 
 pub fn draw_map(ecs: &World, ctx : &mut BTerm) {
     let map = ecs.fetch::<Map>();
@@ -233,7 +245,7 @@ pub fn draw_map(ecs: &World, ctx : &mut BTerm) {
             let bg;
             match tile {
                 TileType::Floor => {
-                    glyph = bracket_lib::terminal::to_cp437('.');
+                    glyph = to_cp437('.');
                     fg = RGB::from_f32(0.0, 0.2, 0.2);
                     bg = RGB::from_f32(0., 0., 0.);
                 }
@@ -241,6 +253,11 @@ pub fn draw_map(ecs: &World, ctx : &mut BTerm) {
                     glyph = wall_glyph(&*map, x, y);
                     fg = RGB::from_f32(0., 1.0, 0.);
                     bg = RGB::named(bracket_lib::color::ROYALBLUE3);
+                }
+                TileType::Exit => {
+                    glyph = to_cp437('>');
+                    fg = RGB::from_f32(0., 1.0, 1.0);
+                    bg = RGB::from_f32(0., 0., 0.);
                 }
             }
             if !map.visible_tiles[idx] { fg = fg.to_greyscale() }

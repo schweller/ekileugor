@@ -3,7 +3,7 @@ use bracket_lib::random::RandomNumberGenerator;
 use bracket_lib::terminal::*;
 use specs::prelude::*;
 
-use crate::map::{Rect, MAPWIDTH};
+use crate::map::{RoomRect, MAPWIDTH};
 use crate::components::*;
 
 const MAX_MONSTERS : i32 = 4;
@@ -38,7 +38,7 @@ pub fn player(ecs: &mut World, x: i32, y:i32) -> Entity {
         .build()
 }
 
-pub fn spawn_room(ecs: &mut World, room: &Rect) {
+pub fn spawn_room(ecs: &mut World, room: &RoomRect) {
     let mut monster_spawn_points : Vec<usize> = Vec::new();
     let mut item_spaw_points : Vec<usize> = Vec::new();
 

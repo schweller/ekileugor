@@ -2,12 +2,16 @@ use bracket_lib::prelude::*;
 use specs::prelude::*;
 
 use crate::game::GameLog;
-use crate::{components::*, RunState};
+use crate::{components::*, map::Map, RunState};
 
 pub fn draw_ui(ecs: &World, ctx: &mut BTerm) {
     ctx.draw_box(0, 43, 79, 6, RGB::named(bracket_lib::color::WHITE), RGB::named(bracket_lib::color::BLACK));
 
     let log = ecs.fetch::<GameLog>();
+    let map = ecs.fetch::<Map>();
+    let depth = format!("Depth: {}", map.depth);
+    ctx.print_color(2, 43, RGB::named(YELLOW), RGB::named(BLACK), &depth);
+
     let mut y = 44;
     for s in log.entries.iter().rev() {
         if y < 49 { ctx.print(2, y, s); }
@@ -17,7 +21,7 @@ pub fn draw_ui(ecs: &World, ctx: &mut BTerm) {
     draw_inventory(ecs, ctx);
     draw_pool_stats(ecs, ctx);
     draw_active_target(ecs, ctx);
-    draw_runstate(ecs, ctx);
+    // draw_runstate(ecs, ctx);
 }
 
 fn draw_inventory(ecs: &World, ctx: &mut BTerm) {
@@ -75,37 +79,37 @@ fn draw_active_target(ecs: &World, ctx: &mut BTerm) {
     );
 }
 
-fn draw_runstate(ecs: &World, ctx: &mut BTerm) {
-    let runstate = ecs.read_resource::<RunState>();
-    let newrunstate;
-    let runstate_string;
-    {
-        newrunstate = *runstate;
-    }
+// fn draw_runstate(ecs: &World, ctx: &mut BTerm) {
+//     let runstate = ecs.read_resource::<RunState>();
+//     let newrunstate;
+//     let runstate_string;
+//     {
+//         newrunstate = *runstate;
+//     }
 
-    match newrunstate {
-        RunState::PreRun => {
-            runstate_string = "Pre Run";
-        }
-        RunState::AwaitingInput => {
-            runstate_string = "Awaiting Input";
-        }
-        RunState::PlayerTurn => {
-            runstate_string = "Player Turn";
-        }
-        RunState::MonsterTurn => {
-            runstate_string = "Monster Turn";
-        }
-        RunState::CurseTurn => {
-            runstate_string = "Curse Turn";
-        }
-    }
+//     match newrunstate {
+//         RunState::PreRun => {
+//             runstate_string = "Pre Run";
+//         }
+//         RunState::AwaitingInput => {
+//             runstate_string = "Awaiting Input";
+//         }
+//         RunState::PlayerTurn => {
+//             runstate_string = "Player Turn";
+//         }
+//         RunState::MonsterTurn => {
+//             runstate_string = "Monster Turn";
+//         }
+//         RunState::CurseTurn => {
+//             runstate_string = "Curse Turn";
+//         }
+//     }
 
-    ctx.print_color(
-        66, 
-        10, 
-        RGB::named(bracket_lib::color::WHITE), 
-        RGB::named(bracket_lib::color::GREY), 
-        runstate_string
-    );    
-}
+//     ctx.print_color(
+//         66, 
+//         10, 
+//         RGB::named(bracket_lib::color::WHITE), 
+//         RGB::named(bracket_lib::color::GREY), 
+//         runstate_string
+//     );    
+// }

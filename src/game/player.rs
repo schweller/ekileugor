@@ -1,7 +1,7 @@
 use bracket_lib::terminal::{BTerm, VirtualKeyCode, Point};
 use specs::prelude::*;
 use crate::{components::*, RunState};
-use crate::map::Map;
+use crate::map::{Map, TileType};
 
 use super::{try_curse, GameLog};
 use super::super::State;
@@ -47,19 +47,35 @@ fn pickup_item(ecs: &mut World) {
     
     let mut target_item : Option<Entity> = None;
     for (item_entity, _item, position) in (&entities, &items, &positions).join() {
-      if position.x == active_entity_pos.x && position.y == active_entity_pos.y {
+        if position.x == active_entity_pos.x && position.y == active_entity_pos.y {
         target_item = Some(item_entity);
-      }    
+        }    
     }
   
     match target_item {
-      None => gamelog.entries.push("There is nothing here to pick up.".to_string()),
-      Some(item) => {
-          let mut pickup = ecs.write_storage::<PickupItemIntent>();
-          pickup.insert(active_entity.target, PickupItemIntent{ picked_by: active_entity.target, item }).expect("Unable to insert want to pickup");
-      }
+        None => gamelog.entries.push("There is nothing here to pick up.".to_string()),
+        Some(item) => {
+            let mut pickup = ecs.write_storage::<PickupItemIntent>();
+            pickup.insert(active_entity.target, PickupItemIntent{ picked_by: active_entity.target, item }).expect("Unable to insert want to pickup");
+        }
     }
-  }
+}
+
+pub fn try_next_level(ecs: &mut World) -> bool {
+    let active_entity = ecs.fetch::<ActiveEntity>();
+    let positions = ecs.read_storage::<Position>();
+    let active_entity_pos = positions.get(active_entity.target).unwrap();
+    let map = ecs.fetch::<Map>();
+    let active_entity_pos_idx = map.xy_idx(active_entity_pos.x, active_entity_pos.y);
+
+    if map.tiles[active_entity_pos_idx] == TileType::Exit {
+        true
+    } else {
+        let mut log = ecs.fetch_mut::<GameLog>();
+        log.entries.push("There is no exit here!".to_string());
+        false 
+    }
+}
 
 pub fn player_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
     // Player movement
@@ -71,7 +87,12 @@ pub fn player_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
             VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
             VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
             VirtualKeyCode::G => pickup_item(&mut gs.ecs),
-            VirtualKeyCode::A => try_curse(&mut gs.ecs),
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            },
+            // VirtualKeyCode::A => try_curse(&mut gs.ecs),
             _ => { return RunState::AwaitingInput }
         },
     }

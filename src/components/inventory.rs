@@ -1,3 +1,4 @@
+use bracket_lib::terminal::Point;
 use specs::prelude::*;
 use specs_derive::*;
 
@@ -17,7 +18,8 @@ pub struct PickupItemIntent{
 
 #[derive(Component, Debug, Clone)]
 pub struct UseItemIntent{
-    pub item : Entity
+    pub item : Entity,
+    pub target : Option<Point>
 }
 
 #[derive(Component, Debug)]
