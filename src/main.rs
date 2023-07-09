@@ -29,6 +29,8 @@ impl State {
         melee_combat.run_now(&self.ecs);
         let mut damage = systems::DamageSystem{};
         damage.run_now(&self.ecs);
+        let mut inventory = systems::InventorySystem{};
+        inventory.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -188,7 +190,7 @@ fn main() -> BError {
         game::spawn_room(&mut gamestate.ecs, room);
     }
 
-    gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});    
+    gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});
     gamestate.ecs.insert(active_entity);
     gamestate.ecs.insert(map);
     gamestate.ecs.insert(RunState::PreRun);

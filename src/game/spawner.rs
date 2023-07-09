@@ -114,6 +114,7 @@ fn monster(ecs: &mut World, x: i32, y:i32, glyph: FontCharType, name : &str) {
         })
         .with(Viewshed{ visible_tiles : Vec::new(), range: 8, dirty: true })
         .with(Mob{})
+        .with(Controllable{ current: false})
         .with(Name{ name : name.to_string() })
         .with(BlocksTile{})
         .with(CombatStats{
