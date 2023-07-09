@@ -114,10 +114,10 @@ impl Map {
             tile_content : vec![Vec::new(); MAPCOUNT],
             depth
         };
-      
-        const MAX_ROOMS : i32 = 7;
-        const MIN_SIZE : i32 = 3;
-        const MAX_SIZE : i32 = 5;
+
+        let MAX_ROOMS : i32 = 7;
+        let MIN_SIZE : i32 = 3;
+        let MAX_SIZE : i32 = 5;
       
         let mut rng = RandomNumberGenerator::new();
         for _ in 0..MAX_ROOMS {

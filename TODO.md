@@ -14,14 +14,14 @@
   - field of view - done
 - map
   - basic mapping (rooms and corridors) - done!
-  - map builder
+  - map builder 
   - bitmask (nice walls) - done!
 - states
-  - turns (controlled and non-controlled) 
+  - turns (controlled and non-controlled)
   - attack?
   - who is not being controlled should move or do smth
   - basic ui state -> inventory, stats
-  - cause damage, either way
+  - cause damage, either way - done!
 - ui
   - current controlled entity
     - stats, etc.

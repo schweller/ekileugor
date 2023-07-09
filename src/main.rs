@@ -36,6 +36,8 @@ impl State {
         inventory_use.run_now(&self.ecs);
         let mut particles = systems::ParticleSpawnSystem{};
         particles.run_now(&self.ecs);
+        let mut trigger = systems::TriggerSystem{};
+        trigger.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -79,15 +81,16 @@ impl State {
         }
 
         let map;
+        let current_depth;
         {
             let mut map_resource = self.ecs.write_resource::<Map>();
-            let current_depth = map_resource.depth;
+            current_depth = map_resource.depth;
             *map_resource = Map::map_with_rooms_and_corridors(current_depth + 1);
             map = map_resource.clone();
         }
 
         for room in map.rooms.iter().skip(1) {
-            spawn_room(&mut self.ecs, room);
+            spawn_room(&mut self.ecs, room, current_depth + 1);
         }
 
         let (player_x, player_y) = map.rooms[0].center();
@@ -109,40 +112,49 @@ impl State {
         let mut log = self.ecs.fetch_mut::<GameLog>();
         log.entries.push("You reached the portal and moved on!".to_string()); 
         // reset stats?
-        
+
     }
 }
 
 impl GameState for State {
     fn tick(&mut self, ctx : &mut BTerm) {
-        ctx.cls();
-        remove_particles(&mut self.ecs, ctx);
-
-        draw_map(&self.ecs, ctx);
-        
-        {
-            let entities = self.ecs.entities();
-            let map = self.ecs.fetch::<Map>();
-            let positions = self.ecs.read_storage::<Position>();
-            let renderables = self.ecs.read_storage::<Renderable>();
-
-            let mut data = (&entities, &positions, &renderables).join().collect::<Vec<_>>();
-            data.sort_by(|&a, &b| b.2.render_order.cmp(&a.2.render_order));
-            for (_entity, pos, render) in data.iter() {
-                let idx = map.xy_idx(pos.x, pos.y);
-                if map.visible_tiles[idx] {
-                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-                }
-            }
-            
-            gui::draw_ui(&self.ecs, ctx);
-        }
-
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
             newrunstate = *runstate;
         }
+
+        ctx.cls();
+        remove_particles(&mut self.ecs, ctx);
+
+        match newrunstate {
+            _ => {
+                render_camera(&self.ecs, ctx);
+                gui::draw_ui(&self.ecs, ctx);        
+            }
+        }
+
+        // draw_map(&self.ecs, ctx);
+        
+        // {
+        //     let entities = self.ecs.entities();
+        //     let map = self.ecs.fetch::<Map>();
+        //     let positions = self.ecs.read_storage::<Position>();
+        //     let renderables = self.ecs.read_storage::<Renderable>();
+
+        //     let mut data = (&entities, &positions, &renderables).join().collect::<Vec<_>>();
+        //     data.sort_by(|&a, &b| b.2.render_order.cmp(&a.2.render_order));
+        //     for (_entity, pos, render) in data.iter() {
+        //         let idx = map.xy_idx(pos.x, pos.y);
+        //         if map.visible_tiles[idx] {
+        //             ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+        //         }
+        //     }
+            
+        //     gui::draw_ui(&self.ecs, ctx);
+        // }
+
+
 
         match newrunstate {
             RunState::PreRun => {
@@ -219,6 +231,10 @@ fn main() -> BError {
     // Combat components
     gamestate.ecs.register::<MeleeIntent>();
     gamestate.ecs.register::<Damage>();
+    gamestate.ecs.register::<InflictsDamage>();
+    gamestate.ecs.register::<Hidden>();
+    gamestate.ecs.register::<EntryTrigger>();
+    gamestate.ecs.register::<EntityMoved>();
 
     gamestate.ecs.register::<Item>();
     gamestate.ecs.register::<ItemOwned>();
@@ -242,7 +258,7 @@ fn main() -> BError {
     gamestate.ecs.insert(rng);
 
     for room in map.rooms.iter().skip(1) {
-        game::spawn_room(&mut gamestate.ecs, room);
+        game::spawn_room(&mut gamestate.ecs, room, 1);
     }
 
     gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});

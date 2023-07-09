@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+
 use bracket_lib::random::RandomNumberGenerator;
 use bracket_lib::terminal::*;
 use specs::prelude::*;
@@ -7,7 +9,6 @@ use crate::map::{RoomRect, MAPWIDTH};
 use crate::components::*;
 
 const MAX_MONSTERS : i32 = 4;
-const MAX_ITEMS : i32 = 2;
 
 pub fn player(ecs: &mut World, x: i32, y:i32) -> Entity {
     ecs
@@ -17,7 +18,7 @@ pub fn player(ecs: &mut World, x: i32, y:i32) -> Entity {
         .with(Position{ x, y})
         .with(Name{name: "Player".to_string() })
         .with(BlocksTile{})
-        .with(Viewshed{ visible_tiles : Vec::new(), range : 30, dirty: true })
+        .with(Viewshed{ visible_tiles : Vec::new(), range : 8, dirty: true })
         .with(Renderable{
             glyph: bracket_lib::terminal::to_cp437('@'),
             fg: RGB::named(bracket_lib::color::YELLOW),
@@ -38,67 +39,55 @@ pub fn player(ecs: &mut World, x: i32, y:i32) -> Entity {
         .build()
 }
 
-pub fn spawn_room(ecs: &mut World, room: &RoomRect) {
-    let mut monster_spawn_points : Vec<usize> = Vec::new();
-    let mut item_spaw_points : Vec<usize> = Vec::new();
+// Spawning entities functions -> random and non-random
+pub fn spawn_room(ecs: &mut World, room: &RoomRect, depth: i32) {
+    let spawn_table = room_random_table(depth);
+    let mut spawn_points : HashMap<usize, String> = HashMap::new();
 
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        let num_items = rng.roll_dice(1, MAX_ITEMS +2) - 3;
+        let num_spawns = rng.roll_dice(1, MAX_MONSTERS + 3) + (depth - 1) - 3;
 
-        for _i in 0 .. num_monsters {
+        for _i in 0 .. num_spawns {
             let mut added = false;
-            while !added {
+            let mut tries = 0;
+            while !added && tries < 20 {
                 let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
                 let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
                 let idx = (y * MAPWIDTH) + x;
-                if !monster_spawn_points.contains(&idx) {
-                    monster_spawn_points.push(idx);
+                if !spawn_points.contains_key(&idx) {
+                    spawn_points.insert(idx, spawn_table.roll(&mut rng));
                     added = true;
+                } else {
+                    tries += 1;
                 }
             }
         }
+    }
 
-        for _i in 0 .. num_items {
-            let mut added = false;
-            while !added {
-                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
-                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
-                let idx = (y * MAPWIDTH) + x;
-                if !item_spaw_points.contains(&idx) {
-                    item_spaw_points.push(idx);
-                    added = true;
-                }
-            }            
+    for spawn in spawn_points.iter() {
+        let x = (*spawn.0 % MAPWIDTH) as i32;
+        let y = (*spawn.0 / MAPWIDTH) as i32;
+
+        match spawn.1.as_ref() {
+            "Goblin" => goblin(ecs, x, y),
+            "Orc" => orc(ecs, x, y),
+            "Health Potion" => health_potion(ecs, x, y),
+            "Spike Trap" => spike_trap(ecs, x, y),
+            _ => {}
         }
     }
-
-    for idx in monster_spawn_points.iter() {
-        let x = *idx % MAPWIDTH;
-        let y = *idx / MAPWIDTH;
-        random_monster(ecs, x as i32, y as i32);
-    }
-
-    for idx in item_spaw_points.iter() {
-        let x = *idx % MAPWIDTH;
-        let y = *idx / MAPWIDTH;
-        random_item(ecs, x as i32, y as i32);
-    }    
 }
 
-pub fn random_monster(ecs : &mut World, x : i32, y : i32) {
-    let roll :i32;
-    {
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1, 2);
-    }
-    match roll {
-        1 => { orc(ecs, x, y) }
-        _ => { goblin(ecs, x, y) }
-    }    
+fn room_random_table(depth: i32) -> RandomTable {
+    RandomTable::new()
+        .add("Goblin", 10)
+        .add("Orc", 1 + depth)
+        .add("Health Potion", 7)
+        .add("Spike Trap", 100 + depth)
 }
 
+// Spawnables
 fn orc(ecs: &mut World, x: i32, y: i32) { monster(ecs, x, y, to_cp437('o'), "Orc"); }
 fn goblin(ecs: &mut World, x: i32, y: i32) { monster(ecs, x, y, to_cp437('g'), "Goblin"); }
 
@@ -131,17 +120,6 @@ fn monster(ecs: &mut World, x: i32, y:i32, glyph: FontCharType, name : &str) {
         .build();  
 }
 
-fn random_item(ecs: &mut World, x: i32, y: i32) {
-    let roll :i32;
-    {
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1, 4);
-    }
-    match roll {
-        _ => { health_potion(ecs, x, y) }
-    }
-}
-
 fn health_potion(ecs: &mut World, x : i32, y : i32) {
     ecs
         .create_entity()
@@ -159,4 +137,66 @@ fn health_potion(ecs: &mut World, x : i32, y : i32) {
             amount: 8
         })
         .build();
+}
+
+fn spike_trap(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity()
+        .with(Position{x, y})
+        .with(Renderable{
+            glyph: to_cp437('^'),
+            fg: RGB::named(RED),
+            bg: RGB::named(BLACK),
+            render_order: 2
+        })
+        .with(EntryTrigger{})
+        .with(InflictsDamage{ amount: 6})
+        .with(Name{name: "Spike Trap".to_string()})
+        .build();
+}
+
+// Random Spawn Table system
+pub struct RandomEntry {
+    name: String,
+    weight: i32
+}
+
+impl RandomEntry {
+    pub fn new<S:ToString>(name: S, weight: i32) -> RandomEntry {
+        RandomEntry { name: name.to_string(), weight }
+    }
+}
+
+#[derive(Default)]
+pub struct RandomTable {
+    entries : Vec<RandomEntry>,
+    total_weight: i32
+}
+
+impl RandomTable {
+    pub fn new() -> RandomTable {
+        RandomTable{ entries: Vec::new(), total_weight: 0}
+    }
+
+    pub fn add<S:ToString>(mut self, name : S, weight: i32) -> RandomTable {
+        self.total_weight += weight;
+        self.entries.push(RandomEntry::new(name.to_string(), weight));
+        self
+    }
+
+    pub fn roll(&self, rng : &mut RandomNumberGenerator) -> String {
+        if self.total_weight == 0 { return "None".to_string(); }
+        let mut roll = rng.roll_dice(1, self.total_weight)-1;
+        let mut index : usize = 0;
+
+        while roll > 0 {
+            if roll < self.entries[index].weight {
+                return self.entries[index].name.clone();
+            }
+
+            roll -= self.entries[index].weight;
+            index += 1;
+        }
+
+        "None".to_string()
+    }
 }

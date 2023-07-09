@@ -4,7 +4,7 @@ use crate::components::*;
 
 use super::GameLog;
 
-pub fn _try_curse(ecs: &mut World) {
+pub fn try_curse(ecs: &mut World) {
     let mut rng = ecs.fetch_mut::<RandomNumberGenerator>();
     let roll = rng.roll_dice(1, 4);
 

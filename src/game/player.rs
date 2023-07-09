@@ -18,6 +18,8 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let map = ecs.fetch::<Map>();
     let active_entity = ecs.fetch::<ActiveEntity>();
 
+    let mut entity_moved = ecs.write_storage::<EntityMoved>();
+
     // let active = controllables.get(active_camera.target).unwrap();
     let active_target_pos = positions.get_mut(active_entity.target).unwrap();
     let viewshed = viewsheds.get_mut(active_entity.target).unwrap();
@@ -31,9 +33,10 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     }
 
     if !map.blocked[dest_idx] {
-        active_target_pos.x = min(79 , max(0, active_target_pos.x + delta_x));
-        active_target_pos.y = min(49, max(0, active_target_pos.y + delta_y));
+        active_target_pos.x = min(map.width - 1 , max(0, active_target_pos.x + delta_x));
+        active_target_pos.y = min(map.height - 1, max(0, active_target_pos.y + delta_y));
         viewshed.dirty = true;
+        entity_moved.insert(active_entity.target, EntityMoved {}).expect("Unable to insert EntityMoved marker");
     }
 }
 

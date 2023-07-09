@@ -17,7 +17,12 @@ impl Damage {
             suffering.amount.push(amount);
         } else {
             let damage = Damage { amount: vec![amount] };
-            store.insert(target, damage).expect("Unable to insert damage intent");
+            store.insert(target, damage).expect("Unable to insert Damage intent");
         }
     }
+}
+
+#[derive(Component, Debug)]
+pub struct InflictsDamage{
+    pub amount: i32
 }

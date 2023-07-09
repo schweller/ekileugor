@@ -9,6 +9,7 @@ mod combat;
 mod viewshed;
 mod inventory;
 mod particle;
+mod trigger;
 
 pub use position::Position;
 pub use renderable::Renderable;
@@ -21,3 +22,4 @@ pub use combat::*;
 pub use viewshed::*;
 pub use inventory::*;
 pub use particle::*;
+pub use trigger::*;
