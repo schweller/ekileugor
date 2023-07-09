@@ -1,9 +1,9 @@
-use bracket_lib::terminal::{BTerm, VirtualKeyCode, Point};
+use bracket_lib::terminal::{BTerm, VirtualKeyCode};
 use specs::prelude::*;
 use crate::{components::*, RunState};
 use crate::map::{Map, TileType};
 
-use super::{try_curse, GameLog};
+use super::{GameLog};
 use super::super::State;
 
 use std::cmp::{min, max};

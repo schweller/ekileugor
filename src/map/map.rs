@@ -255,7 +255,7 @@ pub fn draw_map(ecs: &World, ctx : &mut BTerm) {
                     bg = RGB::named(bracket_lib::color::ROYALBLUE3);
                 }
                 TileType::Exit => {
-                    glyph = to_cp437('>');
+                    glyph = to_cp437('☼');
                     fg = RGB::from_f32(0., 1.0, 1.0);
                     bg = RGB::from_f32(0., 0., 0.);
                 }

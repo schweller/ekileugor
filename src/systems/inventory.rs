@@ -45,7 +45,7 @@ impl<'a> System<'a> for ItemUseSystem {
                       );
 
     fn run(&mut self, data : Self::SystemData) {
-        let (player_entity, mut gamelog, map, entities, mut use_intent, names, healing, mut pool_stats, consumables) = data;
+        let (player_entity, mut gamelog, _map, entities, mut use_intent, names, healing, mut pool_stats, consumables) = data;
 
         for (entity, useitem) in (&entities, &use_intent).join() {
             let mut used_item = true;

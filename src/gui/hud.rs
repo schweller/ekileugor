@@ -2,7 +2,7 @@ use bracket_lib::prelude::*;
 use specs::prelude::*;
 
 use crate::game::GameLog;
-use crate::{components::*, map::Map, RunState};
+use crate::{components::*, map::Map};
 
 pub fn draw_ui(ecs: &World, ctx: &mut BTerm) {
     ctx.draw_box(0, 43, 79, 6, RGB::named(bracket_lib::color::WHITE), RGB::named(bracket_lib::color::BLACK));
@@ -21,7 +21,6 @@ pub fn draw_ui(ecs: &World, ctx: &mut BTerm) {
     draw_inventory(ecs, ctx);
     draw_pool_stats(ecs, ctx);
     draw_active_target(ecs, ctx);
-    // draw_runstate(ecs, ctx);
 }
 
 fn draw_inventory(ecs: &World, ctx: &mut BTerm) {
