@@ -816,6 +816,7 @@ name = "gmtk2023"
 version = "0.1.0"
 dependencies = [
  "bracket-lib",
+ "serde",
  "specs",
  "specs-derive",
 ]
@@ -1535,6 +1536,9 @@ name = "serde"
 version = "1.0.167"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7daf513456463b42aa1d94cff7e0c24d682b429f020b9afa4f5ba5c40a22b237"
+dependencies = [
+ "serde_derive",
+]
 
 [[package]]
 name = "serde_derive"

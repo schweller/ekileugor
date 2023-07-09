@@ -7,6 +7,7 @@ mod map;
 use map::*;
 mod game;
 use game::*;
+use systems::{remove_particles, ParticleBuilder};
 mod gui;
 mod systems;
 
@@ -31,6 +32,8 @@ impl State {
         damage.run_now(&self.ecs);
         let mut inventory = systems::InventorySystem{};
         inventory.run_now(&self.ecs);
+        let mut particles = systems::ParticleSpawnSystem{};
+        particles.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -38,6 +41,7 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx : &mut BTerm) {
         ctx.cls();
+        remove_particles(&mut self.ecs, ctx);
 
         draw_map(&self.ecs, ctx);
         
@@ -144,6 +148,8 @@ fn main() -> BError {
     gamestate.ecs.register::<Consumable>();
     gamestate.ecs.register::<Heals>();
 
+    gamestate.ecs.register::<ParticleLifetime>();
+
 
     let map : Map = Map::map_with_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -194,6 +200,7 @@ fn main() -> BError {
     gamestate.ecs.insert(active_entity);
     gamestate.ecs.insert(map);
     gamestate.ecs.insert(RunState::PreRun);
+    gamestate.ecs.insert(ParticleBuilder::new());
 
     main_loop(context, gamestate)
 }

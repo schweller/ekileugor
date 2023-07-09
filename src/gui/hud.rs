@@ -41,7 +41,7 @@ fn draw_inventory(ecs: &World, ctx: &mut BTerm) {
 
         ctx.print(69, y, &name.name.to_string());
         y += 1;
-        j += 1;        
+        j += 1;
     }
 }
 

@@ -8,6 +8,7 @@ mod blocks;
 mod combat;
 mod viewshed;
 mod inventory;
+mod particle;
 
 pub use position::Position;
 pub use renderable::Renderable;
@@ -19,3 +20,4 @@ pub use blocks::*;
 pub use combat::*;
 pub use viewshed::*;
 pub use inventory::*;
+pub use particle::*;
