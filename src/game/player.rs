@@ -1,4 +1,4 @@
-use bracket_lib::terminal::{BTerm, VirtualKeyCode};
+use bracket_lib::terminal::{BTerm, VirtualKeyCode, Point};
 use specs::prelude::*;
 use crate::{components::*, RunState};
 use crate::map::{Map, TileType};
@@ -36,6 +36,11 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         active_target_pos.x = min(map.width - 1 , max(0, active_target_pos.x + delta_x));
         active_target_pos.y = min(map.height - 1, max(0, active_target_pos.y + delta_y));
         viewshed.dirty = true;
+
+        let mut player_pos = ecs.write_resource::<Point>();
+        player_pos.x = active_target_pos.x;
+        player_pos.y = active_target_pos.y;
+
         entity_moved.insert(active_entity.target, EntityMoved {}).expect("Unable to insert EntityMoved marker");
     }
 }
@@ -45,8 +50,8 @@ fn pickup_item(ecs: &mut World) {
     let entities = ecs.entities();
     let items = ecs.read_storage::<Item>();
     let positions = ecs.read_storage::<Position>();
-    let mut gamelog = ecs.fetch_mut::<GameLog>(); 
-    let active_entity_pos = positions.get(active_entity.target).unwrap();
+    let mut gamelog = ecs.fetch_mut::<GameLog>();
+    let active_entity_pos = ecs.fetch::<Point>();
     
     let mut target_item : Option<Entity> = None;
     for (item_entity, _item, position) in (&entities, &items, &positions).join() {

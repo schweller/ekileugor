@@ -21,8 +21,14 @@
   - attack?
   - who is not being controlled should move or do smth
   - basic ui state -> inventory, stats
-  - cause damage, either way - done!
+- ai
+  - when to move
+  - mob awareness
+  - hostility
 - ui
+  - cause damage, either way - done!
   - current controlled entity
     - stats, etc.
   - inventory
+  - which enemies are visible
+  - 

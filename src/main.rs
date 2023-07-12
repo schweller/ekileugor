@@ -94,10 +94,14 @@ impl State {
         }
 
         let (player_x, player_y) = map.rooms[0].center();
+        let mut player_position = self.ecs.write_resource::<Point>();
+        *player_position = Point::new(player_x, player_y);
+        
         let player_entity = self.ecs.fetch_mut::<Entity>();
         let mut positions = self.ecs.write_storage::<Position>();
-        let player_entity_position = positions.get_mut(*player_entity);
-        if let Some(player_entity_position) = player_entity_position {
+        let player_pos_comp = positions.get_mut(*player_entity);
+
+        if let Some(player_entity_position) = player_pos_comp {
             player_entity_position.x = player_x;
             player_entity_position.y = player_y;
         }
@@ -202,6 +206,7 @@ fn main() -> BError {
     let mut context = BTermBuilder::simple80x50()
         .with_title("GMTK2023 - Ekileugor")
         .with_tile_dimensions(16, 16)
+        .with_fitscreen(true)
         .build()?;
     context.with_post_scanlines(true);
 
@@ -263,6 +268,10 @@ fn main() -> BError {
 
     gamestate.ecs.insert(game::GameLog{entries: vec!["You enter Ekileugor".to_string()]});
     gamestate.ecs.insert(active_entity);
+    gamestate.ecs.insert(Point{
+        x: player_x,
+        y: player_y
+    });
     gamestate.ecs.insert(player_entity);
     gamestate.ecs.insert(map);
     gamestate.ecs.insert(RunState::PreRun);

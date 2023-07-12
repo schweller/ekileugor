@@ -4,8 +4,8 @@ use bracket_lib::prelude::*;
 use serde::{Serialize, Deserialize};
 use specs::prelude::*;
 
-pub const MAPWIDTH : usize = 32;
-pub const MAPHEIGHT : usize = 21;
+pub const MAPWIDTH : usize = 73;
+pub const MAPHEIGHT : usize = 50;
 pub const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
 
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
@@ -115,9 +115,9 @@ impl Map {
             depth
         };
 
-        let MAX_ROOMS : i32 = 7;
-        let MIN_SIZE : i32 = 3;
-        let MAX_SIZE : i32 = 5;
+        const MAX_ROOMS : i32 = 30;
+        const MIN_SIZE : i32 = 6;
+        const MAX_SIZE : i32 = 10;
       
         let mut rng = RandomNumberGenerator::new();
         for _ in 0..MAX_ROOMS {
